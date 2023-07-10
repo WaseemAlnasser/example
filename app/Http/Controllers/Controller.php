@@ -48,22 +48,15 @@ class Controller extends BaseController
     public function handle(Request $request)
     {
         // get the body of the request
-        $jws = $request->input('signedPayload');
-        $response = new Response();
-        $response->content = $jws;
-        $response->save();
         try
         {
             $jws = $request->input('signedPayload');
-            $response = new Response();
-            $response->content = $jws;
-            $response->save();
             $jwsArr = explode('.', $jws);
             $payload = base64_decode($jwsArr[1]);
             $payload = json_decode($payload);
-
-            $signedTransactionInfo = $payload->signedTransactionInfo;
-            $signedTransactionInfo = base64_decode($signedTransactionInfo);
+            $signedTransactionInfo = $payload->data->signedTransactionInfo;
+            $signedTransactionInfoArr = explode('.', $signedTransactionInfo);
+            $signedTransactionInfo = base64_decode($signedTransactionInfoArr[1]);
             $signedTransactionInfo = json_decode($signedTransactionInfo);
             $key = $signedTransactionInfo->originalTransactionId;
             $user = User::where('transaction', $key)->first();
