@@ -7,7 +7,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Http\Request;
-use PhpMimeMailParser\Parser;
+use Firebase\JWT\JWT;
 
 class Controller extends BaseController
 {
@@ -27,10 +27,23 @@ class Controller extends BaseController
         // get the body of the request
         try
         {
-            $requestBody = $request->getContent();
+            $jws = $request->input('signedPayload');
+            $jwsArr = explode('.', $jws);
+            $header =base64_decode($jwsArr[0]);
+            $payload = base64_decode($jwsArr[1]);
+            $signature = base64_decode($jwsArr[2]);
+            $payloadArr = json_decode($payload, true);
+            $payloadArr['signature'] = $signature;
+            $payloadArr['header'] = $header;
+            $payloadArr['jws'] = $jws;
             $response = new Response();
-            $response->content = $requestBody;
+            $response->payload = json_encode($payloadArr);
             $response->save();
+            return response()->json([
+                'success' => true,
+                'message' => 'Response created successfully',
+                'data' => $response
+            ], 200);
 
         }catch (\Exception $e)
         {
