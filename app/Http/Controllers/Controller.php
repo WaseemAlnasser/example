@@ -25,12 +25,22 @@ class Controller extends BaseController
     public function handle(Request $request)
     {
         // get the body of the request
-        $body = $request->body();
-        $body = json_decode($body, true);
-        $response = new Response();
-        $response->content = $body;
-        $response->save();
-        // return http response code 200
+        try
+        {
+            $body = $request->body();
+            $body = json_decode($body, true);
+            $response = new Response();
+            $response->content = $body;
+            $response->save();
+
+        }catch (\Exception $e)
+        {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null
+            ], 500);
+        }
         http_response_code(200);
 
     }
