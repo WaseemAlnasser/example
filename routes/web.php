@@ -19,6 +19,8 @@ Route::get('/', function () {
     return view('welcome', compact('responses'));
 });
 
+Route::post('/webhook', [\App\Http\Controllers\Controller::class,'handle']);
+
 Route::get('/ses', [\App\Http\Controllers\Controller::class,'ses']);
 
 Route::get('/dashboard', function () {
