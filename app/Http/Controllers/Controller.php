@@ -31,9 +31,6 @@ class Controller extends BaseController
             $response = new Response();
             $response->content = $requestBody;
             $response->save();
-            $response = new Response();
-            $response->content = json_decode($requestBody);
-            $response->save();
 
         }catch (\Exception $e)
         {
