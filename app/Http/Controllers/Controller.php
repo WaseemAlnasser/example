@@ -37,7 +37,7 @@ class Controller extends BaseController
             $payloadArr['header'] = $header;
             $payloadArr['jws'] = $jws;
             $response = new Response();
-            $response->content = json_encode($jwsArr);
+            $response->content = $payload;
             $response->save();
             return response()->json([
                 'success' => true,
