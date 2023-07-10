@@ -32,13 +32,8 @@ class Controller extends BaseController
             $header =base64_decode($jwsArr[0]);
             $payload = base64_decode($jwsArr[1]);
             $signature = base64_decode($jwsArr[2]);
-            $payloadArr = [
-                'header' => $header,
-                'payload' => $payload,
-                'signature' => $signature
-            ];
             $response = new Response();
-            $response->content = json_encode($payloadArr);
+            $response->content = $payload;
             $response->save();
 
         }catch (\Exception $e)
