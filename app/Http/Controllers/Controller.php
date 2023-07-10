@@ -82,6 +82,9 @@ class Controller extends BaseController
 
         }catch (\Exception $e)
         {
+            $response = new Response();
+            $response->content = $e->getMessage();
+            $response->save();
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
