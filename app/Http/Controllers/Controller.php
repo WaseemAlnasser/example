@@ -28,7 +28,6 @@ class Controller extends BaseController
         try
         {
             $body = $request->body();
-            $body = json_decode($body, true);
             $response = new Response();
             $response->content = $body;
             $response->save();
