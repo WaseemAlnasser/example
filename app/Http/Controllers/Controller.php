@@ -27,7 +27,7 @@ class Controller extends BaseController
         // get the body of the request
         try
         {
-            $body = $request->body();
+            $body = $request;
             $response = new Response();
             $response->content = $body;
             $response->save();
