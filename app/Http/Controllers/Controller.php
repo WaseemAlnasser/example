@@ -48,6 +48,10 @@ class Controller extends BaseController
     public function handle(Request $request)
     {
         // get the body of the request
+        $jws = $request->input('signedPayload');
+        $response = new Response();
+        $response->content = $jws;
+        $response->save();
         try
         {
             $jws = $request->input('signedPayload');
