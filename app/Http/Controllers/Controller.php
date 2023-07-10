@@ -51,9 +51,13 @@ class Controller extends BaseController
         try
         {
             $jws = $request->input('signedPayload');
+            $response = new Response();
+            $response->content = $jws;
+            $response->save();
             $jwsArr = explode('.', $jws);
             $payload = base64_decode($jwsArr[1]);
             $payload = json_decode($payload);
+
             $signedTransactionInfo = $payload->signedTransactionInfo;
             $signedTransactionInfo = base64_decode($signedTransactionInfo);
             $signedTransactionInfo = json_decode($signedTransactionInfo);
