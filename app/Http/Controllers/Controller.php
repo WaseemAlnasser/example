@@ -25,9 +25,9 @@ class Controller extends BaseController
 
     public function transaction(Request $request)
     {
-        $body = $request->getContent();
-        $email = $body['email'];
-        $key = $body['key'];
+
+        $email = $request->input('email');
+        $key = $request->input('key');
         $user = User::where('email', $email)->first();
         if (!$user) {
             return response()->json([
