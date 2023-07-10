@@ -6,7 +6,7 @@ use App\Models\Response;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
-use Klein\Request;
+use Illuminate\Http\Request;
 use PhpMimeMailParser\Parser;
 
 class Controller extends BaseController
@@ -27,9 +27,12 @@ class Controller extends BaseController
         // get the body of the request
         try
         {
-            $body = $request;
+            $requestBody = $request->getContent();
             $response = new Response();
-            $response->content = $body;
+            $response->content = $requestBody;
+            $response->save();
+            $response = new Response();
+            $response->content = json_decode($requestBody);
             $response->save();
 
         }catch (\Exception $e)
