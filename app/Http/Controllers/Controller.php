@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Response;
+use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
@@ -22,6 +23,28 @@ class Controller extends BaseController
         ], 200);
     }
 
+    public function transaction(Request $request)
+    {
+        $body = $request->getContent();
+        $email = $body['email'];
+        $key = $body['key'];
+        $user = User::where('email', $email)->first();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ], 404);
+        }else{
+            $user->transaction = $key;
+            $user->save();
+            return response()->json([
+                'success' => true,
+                'message' => 'Transaction key saved',
+            ], 200);
+        }
+
+    }
+
     public function handle(Request $request)
     {
         // get the body of the request
@@ -29,11 +52,24 @@ class Controller extends BaseController
         {
             $jws = $request->input('signedPayload');
             $jwsArr = explode('.', $jws);
-            $header =base64_decode($jwsArr[0]);
             $payload = base64_decode($jwsArr[1]);
-            $signature = base64_decode($jwsArr[2]);
+            $payload = json_decode($payload);
+            $signedTransactionInfo = $payload->signedTransactionInfo;
+            $signedTransactionInfo = base64_decode($signedTransactionInfo);
+            $signedTransactionInfo = json_decode($signedTransactionInfo);
+            $key = $signedTransactionInfo->originalTransactionId;
+            $user = User::where('transaction', $key)->first();
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not found',
+                ], 404);
+            }
+            $user->subscribed = 'true';
+            $user->save();
+
             $response = new Response();
-            $response->content = $payload;
+            $response->content = $jws;
             $response->save();
 
         }catch (\Exception $e)

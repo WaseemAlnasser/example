@@ -20,3 +20,5 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 
 Route::post('/v1/webhook', 'App\Http\Controllers\Controller@handle');
+
+Route::post('/v1/transaction', 'App\Http\Controllers\Controller@transaction');
