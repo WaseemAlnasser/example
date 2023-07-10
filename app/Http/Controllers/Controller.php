@@ -27,7 +27,7 @@ class Controller extends BaseController
         // get the body of the request
         $body = $request->body();
         $response = new Response();
-        $response->body = $body;
+        $response->content = $body;
         $response->save();
         // return http response code 200
         http_response_code(200);
