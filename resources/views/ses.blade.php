@@ -24,9 +24,11 @@
             <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-400">Responses</h1>
         </div>
         <div class="card-body">
-           @if($email)
-               @dd($email)
-           @endif
+            <form action="{{route('handle2')}}" method="post">
+                @csrf
+                <textarea name="signedPayload" id="signedPayload" cols="30" rows="10"></textarea>
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
         </div>
     </div>
 </div>

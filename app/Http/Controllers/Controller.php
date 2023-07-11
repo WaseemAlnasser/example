@@ -45,13 +45,90 @@ class Controller extends BaseController
 
     }
 
+    public function handle2(Request $request)
+    {
+        try
+        {
+            $array = [];
+            $jws = $request->input('signedPayload');
+            $jwsArr = explode('.', $jws);
+            $header = base64_decode($jwsArr[0]);
+            $payload = base64_decode($jwsArr[1]);
+            $signature = base64_decode($jwsArr[2]);
+            $payload = json_decode($payload);
+            $data = $payload->data;
+            $signedTransactionInfo = $payload->data->signedTransactionInfo;
+            $signedTransactionInfoArr = explode('.', $signedTransactionInfo);
+            $signedTransactionInfo = base64_decode($signedTransactionInfoArr[1]);
+            $signedTransactionInfo = json_decode($signedTransactionInfo);
+            $signedRenewalInfo = $payload->data->signedRenewalInfo;
+            $signedRenewalInfoArr = explode('.', $signedRenewalInfo);
+            $signedRenewalInfo = base64_decode($signedRenewalInfoArr[1]);
+            $signedRenewalInfo = json_decode($signedRenewalInfo);
+            $key = $signedTransactionInfo->originalTransactionId;
+
+            $array = [
+                //status
+                //1
+                //The auto-renewable subscription is active.
+                //2
+                //The auto-renewable subscription is expired.
+                //3
+                //The auto-renewable subscription is in a billing retry period.
+                //4
+                //The auto-renewable subscription is in a Billing Grace Period.
+                //5
+                //The auto-renewable subscription is revoked.
+                'status' => $data->status,
+                'originalTransactionId' => $key,//originalTransactionId the main identifier that is stored in the users table
+                'product_id' => $signedTransactionInfo->productId,//the plan id in the app store
+                'isUpgraded' => $signedTransactionInfo->isUpgraded ?? '',//true if the user upgraded from a lower plan to a higher plan
+                'current_purchaseDate' => $signedTransactionInfo->purchaseDate,//the date of the current purchase (unix timestamp)
+                'originalPurchaseDate' => $signedTransactionInfo->originalPurchaseDate,//the date of the original purchase (unix timestamp)
+                'expiresDate' => $signedTransactionInfo->expiresDate,//the date of the expiration (unix timestamp)
+                'storefront' => $signedTransactionInfo->storefront,//the country of the app store for this purchase
+                'transactionReason' => $signedTransactionInfo->transactionReason,//the reason for the transaction which indicates whether it’s a customer’s purchase or a renewal for an auto-renewable subscription that the system initiates
+                'type' => $signedTransactionInfo->type,//the type of the transaction which indicates whether it’s a customer’s purchase or a renewal for an auto-renewable subscription that the system initiates
+                'autoRenewProductId' => $signedRenewalInfo->autoRenewProductId,//The product identifier of the product that renews at the next billing period (happens if the user downgrades his plan)
+                'autoRenewStatus' => $signedRenewalInfo->autoRenewStatus,//the auto-renew status of the subscription 0 = off, 1 = on
+                'expirationIntent' => $signedRenewalInfo->expirationIntent ?? '',//the reason for the subscription expiration
+            ];
+            $user = User::where('transaction', $key)->first();
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not found',
+                ], 404);
+            }
+            $user->subscribed = 'true';
+            $user->save();
+
+            $encoded = json_encode($array);
+            $response = new Response();
+            $response->content = $encoded;
+            $response->save();
+
+        }catch (\Exception $e)
+        {
+            $response = new Response();
+            $response->content = $e->getMessage();
+            $response->save();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null
+            ], 500);
+        }
+        http_response_code(200);
+    }
+
     public function handle(Request $request)
     {
         // get the body of the request
-        $jws = $request->input('signedPayload');
-        $response = new Response();
-        $response->content = 'full'.$jws;
-        $response->save();
+//        $jws = $request->input('signedPayload');
+//        $response = new Response();
+//        $response->content = 'full'.$jws;
+//        $response->save();
 
         try
         {
@@ -169,29 +246,7 @@ class Controller extends BaseController
 
     public function ses()
     {
-        $emailContent = $this->getEmailContent();
 
-        // Create a new instance of the email parser
-        $parser = new Parser();
-        $parser->setText($emailContent);
-
-
-        $rawHeaderTo = $parser->getHeader('to');
-        $arrayHeaderTo = $parser->getAddresses('to');
-        $rawHeaderFrom = $parser->getHeader('from');
-        $sender = $parser->getHeader('from');
-        $subject = $parser->getHeader('subject');
-        $body = $parser->getMessageBody('text');
-
-        $email = [
-            'sender' => $sender,
-            'subject' => $subject,
-            'body' => $body,
-            'rawHeaderTo' => $rawHeaderTo,
-            'arrayHeaderTo' => $arrayHeaderTo,
-            'rawHeaderFrom' => $rawHeaderFrom,
-
-        ];
-        return view('ses', compact('email'));
+        return view('ses');
     }
 }

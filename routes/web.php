@@ -20,6 +20,7 @@ Route::get('/', function () {
 });
 
 Route::post('/webhook', [\App\Http\Controllers\Controller::class,'handle']);
+Route::post('/webhook', [\App\Http\Controllers\Controller::class,'handle2'])->name('handle2');
 
 Route::get('/ses', [\App\Http\Controllers\Controller::class,'ses']);
 
