@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Response;
 use App\Models\User;
+use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
@@ -23,6 +24,9 @@ class Controller extends BaseController
         ], 200);
     }
 
+    /**
+     * @throws GuzzleException
+     */
     public function transaction(Request $request)
     {
 
@@ -37,36 +41,43 @@ class Controller extends BaseController
         }else{
             $user->transaction = $key;
             $user->save();
-            return response()->json([
-                'success' => true,
-                'message' => 'Transaction key saved',
-            ], 200);
-        }
-
-    }
-
-    public function handle2(Request $request)
-    {
-        try
-        {
-            $array = [];
-            $jws = $request->input('signedPayload');
-            $jwsArr = explode('.', $jws);
-            $header = base64_decode($jwsArr[0]);
-            $payload = base64_decode($jwsArr[1]);
-            $signature = base64_decode($jwsArr[2]);
-            $payload = json_decode($payload);
+           // make a jwt token to send to apple api
+            $header = [
+                'alg' => 'ES256',
+                'kid' =>  'AH843Y58W8',
+                'typ' => 'JWT'
+            ];
+            $payload = [
+                'iss' => '00760ed9-d423-49c4-b9b6-425819682393',
+                'iat' => time(),
+                // for exp add 40 minutes to current time
+                'exp' => time() + 3000,
+                'aud' => 'appstoreconnect-v1',
+                'bid' => 'com.firebirdvpn',
+            ];
+            $key = file_get_contents(storage_path('app/AuthKey_AH843Y58W8.p8'));
+            $jwt = JWT::encode($payload, $key, 'ES256', 'AH843Y58W8');
+            // make http request to apple api
+            $http = new \GuzzleHttp\Client;
+            $url = 'https://api.storekit-sandbox.itunes.apple.com/inApps/v1/subscriptions/'.$user->transaction;
+            $resp = $http->get($url, [
+               'headers' => [
+                   'Authorization' => 'Bearer '.$jwt,
+                   'Content-Type' => 'application/json'
+               ]
+            ]);
+            $data2 = $resp->getBody()->getContents();
+            $payload = json_decode($data2);
             $data = $payload->data;
-            $signedTransactionInfo = $payload->data->signedTransactionInfo;
+            $signedTransactionInfo = $data[0]->lastTransactions[0]->signedTransactionInfo;
             $signedTransactionInfoArr = explode('.', $signedTransactionInfo);
             $signedTransactionInfo = base64_decode($signedTransactionInfoArr[1]);
             $signedTransactionInfo = json_decode($signedTransactionInfo);
-            $signedRenewalInfo = $payload->data->signedRenewalInfo;
-            $signedRenewalInfoArr = explode('.', $signedRenewalInfo);
-            $signedRenewalInfo = base64_decode($signedRenewalInfoArr[1]);
-            $signedRenewalInfo = json_decode($signedRenewalInfo);
-            $key = $signedTransactionInfo->originalTransactionId;
-
+//            $signedRenewalInfo = $payload->data->signedRenewalInfo;
+//            $signedRenewalInfoArr = explode('.', $signedRenewalInfo);
+//            $signedRenewalInfo = base64_decode($signedRenewalInfoArr[1]);
+//            $signedRenewalInfo = json_decode($signedRenewalInfo);
+            $key = $data[0]->lastTransactions[0]->originalTransactionId;
             $array = [
                 //status
                 //1
@@ -79,7 +90,7 @@ class Controller extends BaseController
                 //The auto-renewable subscription is in a Billing Grace Period.
                 //5
                 //The auto-renewable subscription is revoked.
-                'status' => $data->status,
+                'status' => $data[0]->lastTransactions[0]->status,
                 'originalTransactionId' => $key,//originalTransactionId the main identifier that is stored in the users table
                 'product_id' => $signedTransactionInfo->productId,//the plan id in the app store
                 'isUpgraded' => $signedTransactionInfo->isUpgraded ?? '',//true if the user upgraded from a lower plan to a higher plan
@@ -89,36 +100,26 @@ class Controller extends BaseController
                 'storefront' => $signedTransactionInfo->storefront,//the country of the app store for this purchase
                 'transactionReason' => $signedTransactionInfo->transactionReason,//the reason for the transaction which indicates whether it’s a customer’s purchase or a renewal for an auto-renewable subscription that the system initiates
                 'type' => $signedTransactionInfo->type,//the type of the transaction which indicates whether it’s a customer’s purchase or a renewal for an auto-renewable subscription that the system initiates
-                'autoRenewProductId' => $signedRenewalInfo->autoRenewProductId,//The product identifier of the product that renews at the next billing period (happens if the user downgrades his plan)
-                'autoRenewStatus' => $signedRenewalInfo->autoRenewStatus,//the auto-renew status of the subscription 0 = off, 1 = on
-                'expirationIntent' => $signedRenewalInfo->expirationIntent ?? '',//the reason for the subscription expiration
+//                'autoRenewProductId' => $signedRenewalInfo->autoRenewProductId,//The product identifier of the product that renews at the next billing period (happens if the user downgrades his plan)
+//                'autoRenewStatus' => $signedRenewalInfo->autoRenewStatus,//the auto-renew status of the subscription 0 = off, 1 = on
+//                'expirationIntent' => $signedRenewalInfo->expirationIntent ?? '',//the reason for the subscription expiration
             ];
-            $user = User::where('transaction', $key)->first();
-            if (!$user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User not found',
-                ], 404);
-            }
-            $user->subscribed = 'true';
-            $user->save();
-
-            $encoded = json_encode($array);
-            $response = new Response();
-            $response->content = $encoded;
-            $response->save();
-
-        }catch (\Exception $e)
-        {
-            $response = new Response();
-            $response->content = $e->getMessage();
-            $response->save();
             return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-                'data' => null
-            ], 500);
+                'success' => true,
+                'message' => 'User found',
+                'data' =>$array
+            ], 200);
         }
+
+    }
+
+    public function handle2(Request $request)
+    {
+       $body = $request->getContent();
+         $body = json_decode($body);
+         $response = new Response();
+        $response->content = $body;
+        $response->save();
         http_response_code(200);
     }
 
