@@ -116,7 +116,6 @@ class Controller extends BaseController
     public function handle2(Request $request)
     {
        $body = $request->getContent();
-         $body = json_decode($body);
          $response = new Response();
         $response->content = $body;
         $response->save();
